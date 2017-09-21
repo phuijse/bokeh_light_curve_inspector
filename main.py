@@ -79,10 +79,12 @@ class Main_Interface:
         lc_index = self.page_index*self.N_cols*self.N_rows + self.labeling_index
         lc_dict['user_label'][lc_index] = fill_value
         lc_name = lc_dict['list'][lc_index]
-        period = lc_dict['periods'][lc_index]
-        self.plot_list[self.labeling_index].title.text = get_plot_title_string(lc_index, lc_name, period, fill_value)
+        lc_period = lc_dict['periods'][lc_index]
+        self.plot_list[self.labeling_index].title.text = get_plot_title_string(lc_index, lc_name, lc_period, fill_value)
         self.plot_list[self.labeling_index].outline_line_alpha = 0.0
-        self.labeling_index += 1
+        if lc_index + 1 < len(lc_dict['list']):
+            self.labeling_index += 1
+        # TODO: When is the best moment to save results?
         if self.labeling_index == self.N_cols*self.N_rows:
             self.labeling_index = 0
             self.change_batch_forward()
@@ -197,8 +199,9 @@ if not exists(path_results):
 document = curdoc()
 document.title = "Light curve inspector and labeler"
 #lc_list, lc_periods, lc_features, _, _ = pickle.load(open(feature_file, "rb"))
-lc_list, lc_periods = pickle.load(open(feature_file, "rb"))
-lc_list = np.array(lc_list)
+features  = pickle.load(open(feature_file, "rb"))
+lc_list, lc_periods = np.array(features[0]), features[1]
+
 if len(sys.argv) > 4:
     sub_idx_file = sys.argv[4]
     sub_idx = pickle.load(open(sub_idx_file, "rb"))
