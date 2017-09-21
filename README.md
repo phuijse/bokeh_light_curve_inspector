@@ -5,7 +5,8 @@ A simple pure-python web browser application using Bokeh (bokeh.pydata.org) to v
 ## How to run
 
     cd this_folder
-    bokeh serve . --args example/light_curves example/periods.pkl example/results/
+    mkdir example/results
+    bokeh serve . --args example/light_curves example/periods.pkl example/results
 
 Then point your favorite web browser to
 
