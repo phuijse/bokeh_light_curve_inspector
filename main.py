@@ -15,18 +15,15 @@ from bokeh.models.widgets import Select, PreText, Button, Paragraph, TextInput
 from bokeh.plotting import figure
 from bokeh.palettes import RdBu4 as palette
 
-def get_lc_data(file_name, file_path, period):
-    lc_data = np.loadtxt(join(file_path, file_name))
-    mjd, mag, err = lc_data[:, 0], lc_data[:, 1], lc_data[:, 2]
-    phi1 = np.mod(mjd, period)/period
-    I1 = np.argsort(phi1)
-    phi2 = np.mod(mjd, 2.*period)/(2.*period)
-    I2 = np.argsort(phi2)
-    return np.hstack((phi1[I1], phi1[I1]+1., phi2[I2]+2, phi2[I2]+3)), \
-            np.hstack((mag[I1], mag[I1], mag[I2], mag[I2])), \
-            np.hstack((err[I1], err[I1], err[I2], err[I2]))
+from light_curve_handler import get_lc_data
 
-classes = ["RR Lyrae", "Eclipsing Binary", "Cepheid", "Other/Not Sure"]
+classes = ["RR Lyrae", "Eclipsing Binary", "Cepheid", "Other"]
+
+def get_plot_title_string(lc_index, lc_name, lc_period, lc_class=-1):
+    if lc_class == -1 :
+        return "%d) File: %s Period: %0.4f [days]" %(lc_index, lc_name, lc_period)
+    else:
+        return "%d) File: %s Period: %0.4f [days] Class: %s" %(lc_index, lc_name, lc_period, classes[lc_class])
 
 class Main_Interface:
     def __init__(self, N_rows=3, N_cols=3):
@@ -75,6 +72,7 @@ class Main_Interface:
             widget_list.append(button)
         widget_list.append(self.find_unlabeled)
         self.find_unlabeled.on_click(self.find_first_unlabeled)
+        widget_list.append(Paragraph(text="Plot's legend: (blue dots) Folded with reported period, (red dots) folded with twice the reported period", width=180))
         self.figure = row(widgetbox(widget_list, width=200), grid)
     
     def set_new_label(self, fill_value=0):
@@ -82,7 +80,7 @@ class Main_Interface:
         lc_dict['user_label'][lc_index] = fill_value
         lc_name = lc_dict['list'][lc_index]
         period = lc_dict['periods'][lc_index]
-        self.plot_list[self.labeling_index].title.text = "%d %s %0.4f %s" %(lc_index, lc_name[:-4], period, classes[fill_value])
+        self.plot_list[self.labeling_index].title.text = get_plot_title_string(lc_index, lc_name, period, fill_value)
         self.plot_list[self.labeling_index].outline_line_alpha = 0.0
         self.labeling_index += 1
         if self.labeling_index == self.N_cols*self.N_rows:
@@ -107,7 +105,8 @@ class Main_Interface:
 
     def update_curr_batch(self):
         self.curr_batch.text = "Page %d out of %d" %(self.page_index, len(lc_dict['list'])/(self.N_cols*self.N_rows))
-    
+   
+
     def find_first_unlabeled(self):
         labels = lc_dict['user_label']
         unlabeled_index = np.where(labels == -1)[0]
@@ -142,7 +141,7 @@ class Main_Interface:
                 if lc_index < len(lc_dict['list']):
                     lc_name = lc_dict['list'][lc_index]
                     period = lc_dict['periods'][lc_index]
-                    phi, mag, err = get_lc_data(lc_name, lc_dict['path'], period)
+                    phi, mag, err = get_lc_data(join(lc_dict['path'], lc_name), period)
                     for x, y, yerr in zip(phi, mag, err):
                         x_err.append((x, x))
                         y_err.append((y - yerr, y + yerr))
@@ -158,10 +157,7 @@ class Main_Interface:
                     self.plot_list[plot_index].y_range.start = mean + 3*scale
                     self.plot_list[plot_index].y_range.end = mean - 3*scale
                     plot_label = lc_dict['user_label'][lc_index]
-                    if plot_label == -1:
-                        self.plot_list[plot_index].title.text = "%d %s %0.4f" %(lc_index, lc_name[:-4], period)
-                    else:
-                        self.plot_list[plot_index].title.text = "%d %s %0.4f %s" %(lc_index, lc_name[:-4], period, classes[plot_label])
+                    self.plot_list[plot_index].title.text = get_plot_title_string(lc_index, lc_name, period, plot_label)
                 else:
                     self.source_list[plot_index].data = dict(x=[0], y=[0], x_err=[1], y_err=[1], c=[0])
                     self.plot_list[plot_index].title.text = ""
@@ -200,16 +196,17 @@ if not exists(path_results):
 
 document = curdoc()
 document.title = "Light curve inspector and labeler"
-lc_list, lc_periods, lc_features, _, _ = pickle.load(open(feature_file, "rb"))
+#lc_list, lc_periods, lc_features, _, _ = pickle.load(open(feature_file, "rb"))
+lc_list, lc_periods = pickle.load(open(feature_file, "rb"))
 lc_list = np.array(lc_list)
 if len(sys.argv) > 4:
     sub_idx_file = sys.argv[4]
     sub_idx = pickle.load(open(sub_idx_file, "rb"))
     lc_list = lc_list[sub_idx]
     lc_periods = lc_periods[sub_idx]
-    lc_features = lc_features[sub_idx]
+#    lc_features = lc_features[sub_idx]
 
-lc_dict = {'list': lc_list, 'periods': lc_periods, 'features': lc_features, 'path': lc_data_path, \
-        'user_label': -1*np.ones(shape=(len(lc_list),), dtype=int)}
+lc_dict = {'list': lc_list, 'periods': lc_periods, #'features': lc_features, 
+        'path': lc_data_path, 'user_label': -1*np.ones(shape=(len(lc_list),), dtype=int)}
 Auth_Interface(document)
 
