@@ -23,9 +23,11 @@ Reading and parsing of the light curve files is done in light\_curve\_handler.py
 ### What you should see when running the example
 
 Log-in interface:
+
 ![Log-in interface](/example/capture1.png?raw=true "Log-in interface")
 
 Inspector interface:
+
 ![Inspector interface](/example/capture2.png?raw=true "Inspector interface")
 
 ### How does it work
